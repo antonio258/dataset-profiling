@@ -1,0 +1,120 @@
+[project]
+name = "dataset-profiling"
+version = "0.1.0"
+description = ""
+requires-python = "~=3.11"
+authors = [
+    { name = "Antônio Pereira", email = "antonio258p@gmail.com" }
+]
+dependencies = [
+    "pytest",
+    "rich>=14.0.0",
+    "typer>=0.16.0",
+    "pandas>=1.3.0",
+    "numpy>=1.20.0",
+    "plotly>=5.0.0",
+    "matplotlib>=3.4.0",
+    "wordcloud>=1.8.0",
+    "scikit-learn>=1.0.0",
+    "pyyaml>=6.0",
+    "openpyxl>=3.1.5",
+]
+
+[build-system]
+requires = ["setuptools>=42.0", "wheel", "build"]
+build-backend = "setuptools.build_meta"
+
+[dependency-groups]
+dev = [
+    "bashate>=2.1.1",
+    "black>=25.1.0",
+    "codespell>=2.4.1",
+    "flake8>=7.2.0",
+    "interrogate>=1.7.0",
+    "isort>=6.0.1",
+    "pre-commit>=4.2.0",
+    "yamllint>=1.37.0"
+]
+transformers = [
+    "transformers>=4.52.4",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+pythonpath = "."
+
+[tool.coverage.run]
+omit = [
+    "*__init__.py",
+    "dataset_profiling/__main__.py"
+]
+
+[project.scripts]
+dataset-profiling = "dataset_profiling.cli:app"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+exclude = ["tests*"]
+
+[tool.setuptools.package-data]
+dataset_profiling = [
+    "*.py"
+]
+
+[tool.black]
+line-length = 120
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+ensure_newline_before_comments = true
+line_length = 120
+length_sort = true
+force_sort_within_sections = true
+
+[tool.codespell]
+skip = '*.po,*.ts,./tests'
+count = true
+quiet-level = 3
+
+[tool.interrogate]
+ignore-init-method = true
+ignore-init-module = false
+ignore-magic = false
+ignore-semiprivate = false
+ignore-private = false
+ignore-property-decorator = false
+ignore-module = true
+ignore-nested-functions = false
+ignore-nested-classes = true
+ignore-setters = false
+fail-under = 100
+exclude = ["setup.py", "docs", "build"]
+ignore-regex = ["^get$", "^mock_.*", ".*BaseClass.*"]
+verbose = 2
+quiet = false
+whitelist-regex = []
+color = true
+generate-badge = "."
+badge-format = "svg"

@@ -1,0 +1,5 @@
+[flake8]
+inline-quotes = double
+ignore = E203, E266, E501, W503, F403, F401, D401, D107, D100, E722, B008
+max-line-lenght = 120
+max-complexity = 10

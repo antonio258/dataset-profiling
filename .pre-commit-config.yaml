@@ -1,0 +1,93 @@
+---
+
+repos:
+    - repo: https://github.com/pre-commit/pre-commit-hooks
+      rev: v5.0.0
+      hooks:
+          - id: check-docstring-first
+            exclude: ^docs/
+          - id: detect-aws-credentials
+            exclude: ^docs/
+            args: ["--allow-missing-credentials"]
+          - id: detect-private-key
+            exclude: ^docs/
+          - id: name-tests-test
+            exclude: ^docs/
+          - id: trailing-whitespace
+            exclude: ^docs/
+          - id: check-yaml
+            exclude: ^docs/
+          - id: end-of-file-fixer
+            exclude: '.*\.jinja|^docs/'
+          - id: check-added-large-files
+            exclude: ^docs/
+          - id: debug-statements
+            exclude: ^docs/
+
+    - repo: https://github.com/pre-commit/pygrep-hooks
+      rev: v1.10.0
+      hooks:
+          - id: python-use-type-annotations
+            exclude: ^docs/
+
+    - repo: https://github.com/psf/black
+      rev: 25.1.0
+      hooks:
+          - id: black
+            name: black
+            language_version: python3
+            args: [--verbose]
+            exclude: ^docs/
+
+    - repo: https://github.com/pycqa/isort
+      rev: 6.0.1
+      hooks:
+          - id: isort
+            exclude: ^docs/
+
+    - repo: https://github.com/codespell-project/codespell
+      rev: v2.4.1
+      hooks:
+          - id: codespell
+            language: python
+            types: [text]
+            args: ["--skip=*.md,*.http,*.json,*.txt,*.sql,*.md.*,*.lock"]
+            exclude: ^docs/
+
+    - repo: https://github.com/adrienverge/yamllint
+      rev: v1.37.0
+      hooks:
+          - id: yamllint
+            entry: yamllint
+            language: python
+            types: [file, yaml]
+            exclude: ^docs/
+
+    - repo: https://github.com/openstack/bashate
+      rev: 2.1.1
+      hooks:
+          - id: bashate
+            entry: bashate
+            language: python
+            types: [shell]
+            exclude: ^docs/
+
+    - repo: https://github.com/PyCQA/flake8
+      rev: 7.2.0
+      hooks:
+          - id: flake8
+            additional_dependencies:
+                - flake8-docstrings==1.7.0
+                - flake8-print==5.0.0
+                - flake8-bugbear==24.12.12
+                - flake8-commas==4.0.0
+                - flake8-pytest-style==2.1.0
+            args:
+                - --docstring-convention=google
+            exclude: ^docs/
+
+    - repo: https://github.com/econchick/interrogate
+      rev: 1.7.0
+      hooks:
+          - id: interrogate
+            exclude: ^docs/
