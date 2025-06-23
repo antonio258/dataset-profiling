@@ -45,7 +45,7 @@ def create_html_report(df, title, column_analyses, basic_stats, primary_color="#
     for analysis in column_analyses:
         column_name = analysis["name"]
         series = df[column_name]
-        
+
         # Common part of the column card
         card_header = f"""
         <div class="column-card">
@@ -55,7 +55,7 @@ def create_html_report(df, title, column_analyses, basic_stats, primary_color="#
                 <p><strong>Missing:</strong> {analysis["missing"]} ({analysis["missing_percent"]}%)</p>
                 <p><strong>Unique:</strong> {analysis["unique"]} ({analysis["unique_percent"]}%)</p>
         """
-        
+
         # Type-specific metadata
         if analysis["is_numeric"]:
             card_header += f"""
@@ -71,18 +71,18 @@ def create_html_report(df, title, column_analyses, basic_stats, primary_color="#
             """
 
         card_header += "</div>"
-        
+
         visualizations = ""
         # Type-specific visualizations for the "Column Analysis" tab
         if analysis["is_numeric"]:
-            visualizations += f'<div class="viz-container">{create_histogram(series, f"Distribution of {column_name}")}</div>'
-            visualizations += f'<div class="viz-container">{create_box_plot(series, f"Box Plot of {column_name}")}</div>'
+            visualizations += f'<div class="viz-container">{create_histogram(series, f"Distribution of {column_name}", primary_color)}</div>'
+            visualizations += f'<div class="viz-container">{create_box_plot(series, f"Box Plot of {column_name}", primary_color)}</div>'
         elif analysis["is_datetime"]:
-            visualizations += f'<div class="viz-container">{create_time_series(series, f"Time Series of {column_name}")}</div>'
+            visualizations += f'<div class="viz-container">{create_time_series(series, f"Time Series of {column_name}", primary_color)}</div>'
         elif analysis["is_text"]:
             visualizations += f'<div class="viz-container">{create_wordcloud(series, f"Word Cloud of {column_name}")}</div>'
         else: # Categorical
-             visualizations += f'<div class="viz-container">{create_bar_chart(series, f"Value Counts of {column_name}")}</div>'
+             visualizations += f'<div class="viz-container">{create_bar_chart(series, f"Value Counts of {column_name}", primary_color)}</div>'
              visualizations += f'''
                 <div class="expandable-card">
                     <div class="expandable-header" onclick="toggleExpandable(this)"><h4>Full Value Distribution</h4><span class="expand-icon">+</span></div>
@@ -95,7 +95,7 @@ def create_html_report(df, title, column_analyses, basic_stats, primary_color="#
         if analysis["is_text"]:
             text_card_content = f"{card_header}"
             text_card_content += f'<div class="viz-container">{create_wordcloud(series, f"Word Cloud of {column_name}")}</div>'
-            
+
             # Word stats
             text_card_content += f"""
                 <div class="text-stats-container">
@@ -107,9 +107,9 @@ def create_html_report(df, title, column_analyses, basic_stats, primary_color="#
                     </div>
                 </div>
             """
-            text_card_content += f'<div class="viz-container">{create_word_count_histogram(analysis.get("word_counts", []), f"Word Count Distribution")}</div>'
-            text_card_content += f'<div class="viz-container">{create_word_count_boxplot(analysis.get("word_counts", []), f"Word Count Boxplot")}</div>'
-            
+            text_card_content += f'<div class="viz-container">{create_word_count_histogram(analysis.get("word_counts", []), f"Word Count Distribution", primary_color)}</div>'
+            text_card_content += f'<div class="viz-container">{create_word_count_boxplot(analysis.get("word_counts", []), f"Word Count Boxplot", primary_color)}</div>'
+
             # LLM stats
             if "model_token_stats" in analysis and analysis["model_token_stats"]:
                  text_card_content += '<div class="alert alert-info"><strong>Note:</strong> Calculated costs are based on input costs only.</div>'
@@ -133,14 +133,14 @@ def create_html_report(df, title, column_analyses, basic_stats, primary_color="#
                                     <div class="text-stat-card"><div class="text-stat-title">Total Cost</div><div class="text-stat-value">${model_stats.get("total_token_cost", 0):,.4f}</div></div>
                                     <div class="text-stat-card"><div class="text-stat-title">Avg Cost/Doc</div><div class="text-stat-value">${model_stats.get("avg_cost_per_doc", 0):,.4f}</div></div>
                                 </div>'''
-                        
+
                         text_card_content += f'''
                                 </div>
                                 <div class="viz-container">{create_token_count_histogram(model_stats.get("token_counts", []), f"Token Count Distribution ({model_name})")}</div>
                                 <div class="viz-container">{create_token_count_boxplot(model_stats.get("token_counts", []), f"Token Count Boxplot ({model_name})")}</div>
                             </div>
                         </div>'''
-            
+
             text_columns_html += f'<div class="column-card">{text_card_content}</div>'
 
     # The full HTML template is very large. It is being copied from the original file.
@@ -183,14 +183,14 @@ def create_html_report(df, title, column_analyses, basic_stats, primary_color="#
             .tab-button.active {{ color: var(--primary-color); }}
             .tab-button.active::after {{ content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 2px; background-color: var(--primary-color); }}
             .tab-content {{ display: none; padding-top: 24px; }} #dataset-overview {{ display: block; }}
-            .stats-container, .text-stats-grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }}
+            .stats-container, .text-stats-grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }}
             .stat-card, .text-stat-card {{ background-color: var(--card-background); border-radius: 4px; padding: 16px; box-shadow: var(--elevation-1); text-align: center; }}
             .stat-card h3, .text-stat-title {{ font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 8px; font-weight: 500; }}
             .stat-card p, .text-stat-value {{ font-size: 1.75rem; font-weight: 500; color: var(--primary-color); }}
-            .overview-card, .column-card {{ background-color: var(--card-background); border-radius: 4px; box-shadow: var(--elevation-1); margin-bottom: 32px; overflow: hidden; }}
-            .overview-card h3, .column-card h3 {{ padding: 16px; margin: 0; border-bottom: 1px solid var(--divider-color); font-size: 1.25rem; color: var(--primary-color); }}
-            .viz-container, .column-metadata, .text-stats-container {{ padding: 16px; }}
-            .column-metadata {{ display: flex; flex-wrap: wrap; padding-bottom: 0; }} .column-metadata p {{ margin: 0 16px 16px 0; font-size: 0.875rem; }} .column-metadata p strong {{ color: var(--text-primary); }}
+            .overview-card, .column-card {{ background-color: var(--card-background); border-radius: 4px; box-shadow: var(--elevation-1); padding: 24px; margin-bottom: 32px; overflow: hidden; }}
+            .overview-card h3, .column-card h3 {{ margin-top: 0; color: var(--primary-color); border-bottom: 1px solid var(--divider-color); padding-bottom: 8px; font-size: 1.25rem; font-weight: 500; letter-spacing: 0.15px; }}
+            .viz-container, .text-stats-container {{ padding: 16px; }}
+            .column-metadata {{ display: flex; flex-wrap: wrap; margin-bottom: 16px; padding: 16px 0; border-bottom: 1px solid var(--divider-color); }} .column-metadata p {{ margin: 0 16px 16px 0; font-size: 0.875rem; }} .column-metadata p strong {{ color: var(--text-primary); }}
             .alert {{ padding: 16px; border-radius: 4px; margin: 16px; border: 1px solid; }} .alert-info {{ border-color: #2196F3; background-color: #E3F2FD; color: #1E88E5; }}
             .expandable-card {{ border: 1px solid var(--divider-color); margin: 16px; border-radius: 4px; }}
             .expandable-header {{ padding: 12px 16px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background-color: #f5f5f5; }}

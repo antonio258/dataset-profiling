@@ -21,7 +21,7 @@ def create_bar_chart(series, title, primary_color="#2196f3"):
         top_20 = value_counts.head(20)
         others_sum = value_counts[20:].sum()
         value_counts = pd.concat([top_20, pd.Series({"Others (by profiler)": others_sum})])
-        
+
     fig = px.bar(x=value_counts.index, y=value_counts.values, title=title, template="plotly_white", color_discrete_sequence=[primary_color])
     fig.update_traces(texttemplate='%{y}', textposition='outside')
     fig.update_layout(xaxis_title=series.name, yaxis_title="Count", showlegend=False, margin=dict(l=40, r=40, t=40, b=40), autosize=True)
@@ -43,12 +43,14 @@ def create_time_series(series, title, primary_color="#2196f3"):
 def create_missing_values_chart(df, title, primary_color="#2196f3"):
     missing = df.isna().sum().sort_values(ascending=False)
     missing_percent = (missing / len(df) * 100).round(2)
+    # Filter to only show columns with missing values
     missing = missing[missing > 0]
+    missing_percent = missing_percent[missing_percent > 0]
     if len(missing) == 0:
         return "<div class='alert alert-success'>No missing values found in the dataset.</div>"
     fig = make_subplots(specs=[[{"secondary_y": True}]])
     fig.add_trace(go.Bar(x=missing.index, y=missing.values, name="Missing Count", marker_color=primary_color, text=missing.values, textposition='outside'), secondary_y=False)
-    fig.add_trace(go.Scatter(x=missing_percent.index, y=missing_percent.values, name="Missing Percent", marker_color='#FF9900', mode='lines+markers'), secondary_y=True)
+    fig.add_trace(go.Scatter(x=missing.index, y=missing_percent[missing.index].values, name="Missing Percent", marker_color='#FF9900', mode='lines+markers'), secondary_y=True)
     fig.update_layout(title="", template="plotly_white", xaxis_title="Column", margin=dict(l=40, r=40, t=10, b=40), autosize=True)
     fig.update_yaxes(title_text="Count", secondary_y=False)
     fig.update_yaxes(title_text="Percent (%)", secondary_y=True)
