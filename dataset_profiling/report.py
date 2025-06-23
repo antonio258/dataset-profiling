@@ -60,14 +60,17 @@ def create_html_report(df, title, column_analyses, basic_stats, primary_color="#
         if analysis["is_numeric"]:
             card_header += f"""
                 <p><strong>Min:</strong> {analysis.get("min")}</p> <p><strong>Max:</strong> {analysis.get("max")}</p> <p><strong>Mean:</strong> {analysis.get("mean")}</p>
+                <p><strong>Median:</strong> {analysis.get("median")}</p> <p><strong>Std Dev:</strong> {analysis.get("std")}</p>
             """
         elif analysis["is_datetime"]:
             card_header += f"""
-                <p><strong>Start:</strong> {analysis.get("min")}</p> <p><strong>End:</strong> {analysis.get("max")}</p>
+                <p><strong>Start:</strong> {analysis.get("min")}</p> <p><strong>End:</strong> {analysis.get("max")}</p> <p><strong>Range (days):</strong> {analysis.get("range_days")}</p>
             """
         elif "avg_length" in analysis:
             card_header += f"""
                  <p><strong>Avg Length:</strong> {analysis.get("avg_length")}</p>
+                 <p><strong>Min Length:</strong> {analysis.get("min_length")}</p>
+                 <p><strong>Max Length:</strong> {analysis.get("max_length")}</p>
             """
 
         card_header += "</div>"
@@ -113,19 +116,30 @@ def create_html_report(df, title, column_analyses, basic_stats, primary_color="#
             # LLM stats
             if "model_token_stats" in analysis and analysis["model_token_stats"]:
                  text_card_content += '<div class="alert alert-info"><strong>Note:</strong> Calculated costs are based on input costs only.</div>'
+                 # Get the model used for tokenization (if available)
+                 tokenizer_model = analysis.get("model_name", "")
+
                  for model_name, model_stats in analysis["model_token_stats"].items():
                      if model_stats.get("total_tokens", 0) > 0:
+                        # Start expandable card
                         text_card_content += f'''
                         <div class="expandable-card">
                             <div class="expandable-header" onclick="toggleExpandable(this)"><h4>LLM Analysis: {model_name}</h4><span class="expand-icon">+</span></div>
                             <div class="expandable-content">
                                 <div class="text-stats-container">
+                        '''
+
+                        # Only show token statistics for the model used to generate tokens
+                        if model_name == tokenizer_model:
+                            text_card_content += f'''
                                     <div class="text-stats-grid">
                                         <div class="text-stat-card"><div class="text-stat-title">Unique Tokens</div><div class="text-stat-value">{model_stats.get("unique_tokens", 0):,}</div></div>
                                         <div class="text-stat-card"><div class="text-stat-title">Total Tokens</div><div class="text-stat-value">{model_stats.get("total_tokens", 0):,}</div></div>
                                         <div class="text-stat-card"><div class="text-stat-title">Avg Tokens/Doc</div><div class="text-stat-value">{model_stats.get("avg_tokens_per_doc", 0)}</div></div>
                                     </div>
-                        '''
+                            '''
+
+                        # Show cost statistics for all models
                         if "total_token_cost" in model_stats:
                             text_card_content += f'''
                                 <h4 class="mt-4">Cost Statistics</h4>
@@ -134,10 +148,20 @@ def create_html_report(df, title, column_analyses, basic_stats, primary_color="#
                                     <div class="text-stat-card"><div class="text-stat-title">Avg Cost/Doc</div><div class="text-stat-value">${model_stats.get("avg_cost_per_doc", 0):,.4f}</div></div>
                                 </div>'''
 
-                        text_card_content += f'''
+                        # Close the stats container
+                        text_card_content += '''
                                 </div>
+                        '''
+
+                        # Only show token visualizations for the model used to generate tokens
+                        if model_name == tokenizer_model:
+                            text_card_content += f'''
                                 <div class="viz-container">{create_token_count_histogram(model_stats.get("token_counts", []), f"Token Count Distribution ({model_name})")}</div>
                                 <div class="viz-container">{create_token_count_boxplot(model_stats.get("token_counts", []), f"Token Count Boxplot ({model_name})")}</div>
+                            '''
+
+                        # Close the expandable card
+                        text_card_content += '''
                             </div>
                         </div>'''
 

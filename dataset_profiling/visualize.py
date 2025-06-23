@@ -69,7 +69,7 @@ def create_wordcloud(series, title):
         text = ' '.join(series.dropna().astype(str))
         if not text.strip() or len(text.split()) == 0:
             return "<div class='alert alert-info'>Not enough text data to generate a wordcloud.</div>"
-        wordcloud = WordCloud(width=800, height=400, background_color='white', max_words=200).generate(text)
+        wordcloud = WordCloud(width=1920, height=1080, background_color='white', max_words=200).generate(text)
         buffer = BytesIO()
         plt.figure(figsize=(10, 5)); plt.imshow(wordcloud, interpolation='bilinear'); plt.axis('off'); plt.title(title); plt.tight_layout(pad=0);
         plt.savefig(buffer, format='png', dpi=150); plt.close();

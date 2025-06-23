@@ -106,6 +106,8 @@ def analyze_column(df, column, llm_models=None, llm_model=None, llm_token=None, 
 
             # Add base tokenization stats to the top level for the legacy report section
             analysis.update(tokenization_results)
+            # Add the model name to identify which model was used for tokenization
+            analysis["model_name"] = base_tokenizer_model
             # Add cost for the base model itself to the top level
             base_input_cost = base_model_config.get('input_cost')
             if base_input_cost is not None and tokenization_results.get("total_tokens", 0) > 0:
