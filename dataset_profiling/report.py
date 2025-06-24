@@ -1,17 +1,62 @@
+"""Report generation module for dataset profiling.
+
+This module provides functions to generate comprehensive HTML reports for DataFrame analysis.
+It combines statistics and visualizations to create an interactive report with multiple tabs:
+- Dataset Overview: Basic statistics, data types, missing values, and sample data
+- Column Analysis: Detailed analysis of each column with type-specific visualizations
+- Text Analysis: In-depth analysis of text columns including word statistics and LLM tokenization
+"""
+
 from datetime import datetime
-from .stats import get_basic_stats, analyze_column
+
+from .stats import analyze_column, get_basic_stats
 from .visualize import (
-    create_histogram, create_bar_chart, create_box_plot, create_time_series,
-    create_missing_values_chart, create_data_types_chart, create_wordcloud,
-    create_value_counts_table, create_sample_data_table,
-    create_word_count_histogram, create_word_count_boxplot,
-    create_token_count_histogram, create_token_count_boxplot, create_token_cost_histogram
+    create_box_plot,
+    create_bar_chart,
+    create_histogram,
+    create_wordcloud,
+    create_time_series,
+    create_data_types_chart,
+    create_sample_data_table,
+    create_value_counts_table,
+    create_word_count_boxplot,
+    create_token_count_boxplot,
+    create_missing_values_chart,
+    create_token_cost_histogram,
+    create_word_count_histogram,
+    create_token_count_histogram,
 )
 
-def generate_profile_report(df, title="DataFrame Characterization Report", output_file="profile.html", 
-                     llm_models=None, llm_model=None, llm_token=None, llm_input_cost=None, primary_color="#2196f3"):
-    """
-    Generate a comprehensive profile report for the DataFrame.
+
+def generate_profile_report(
+    df,
+    title="DataFrame Characterization Report",
+    output_file="profile.html",
+    llm_models=None,
+    llm_model=None,
+    llm_token=None,
+    llm_input_cost=None,
+    primary_color="#2196f3",
+):
+    """Generate a comprehensive profile report for the DataFrame.
+
+    Analyzes the DataFrame and generates an HTML report with detailed statistics
+    and visualizations for the entire dataset and each column. The report includes
+    basic statistics, data type distribution, missing values analysis, and column-specific
+    visualizations based on data types.
+
+    Args:
+        df (pandas.DataFrame): The DataFrame to analyze
+        title (str, optional): The title for the report. Defaults to "DataFrame Characterization Report".
+        output_file (str, optional): The path where the HTML report will be saved. Defaults to "profile.html".
+        llm_models (dict, optional): Dictionary mapping model names to their configurations for LLM analysis. Defaults to None.
+        llm_model (str, optional): The name of the model to use for tokenization. Defaults to None.
+        llm_token (str, optional): The token to use for authentication with the LLM API. Defaults to None.
+        llm_input_cost (float, optional): The cost per token for the LLM model. Defaults to None.
+        primary_color (str, optional): The primary color to use in the report's visualizations. Defaults to "#2196f3".
+
+    Returns:
+        str: The path to the generated HTML report
     """
     print("Analyzing basic statistics...")
     basic_stats = get_basic_stats(df)
@@ -34,8 +79,21 @@ def generate_profile_report(df, title="DataFrame Characterization Report", outpu
 
 
 def create_html_report(df, title, column_analyses, basic_stats, primary_color="#2196f3"):
-    """
-    Create an HTML report with all the analyses and visualizations.
+    """Create an HTML report with all the analyses and visualizations.
+
+    Generates a complete HTML report with multiple tabs for dataset overview,
+    column analysis, and text analysis. The report includes interactive elements
+    such as expandable sections and tabs.
+
+    Args:
+        df (pandas.DataFrame): The DataFrame that was analyzed
+        title (str): The title for the report
+        column_analyses (list): List of column analysis dictionaries from analyze_column
+        basic_stats (dict): Dictionary of basic statistics from get_basic_stats
+        primary_color (str, optional): Primary color for the report's visualizations. Defaults to "#2196f3".
+
+    Returns:
+        str: Complete HTML report as a string
     """
     missing_chart = create_missing_values_chart(df, "Missing Values by Column", primary_color)
     dtypes_chart = create_data_types_chart(df, "Data Types Distribution")
@@ -83,21 +141,25 @@ def create_html_report(df, title, column_analyses, basic_stats, primary_color="#
         elif analysis["is_datetime"]:
             visualizations += f'<div class="viz-container">{create_time_series(series, f"Time Series of {column_name}", primary_color)}</div>'
         elif analysis["is_text"]:
-            visualizations += f'<div class="viz-container">{create_wordcloud(series, f"Word Cloud of {column_name}")}</div>'
-        else: # Categorical
-             visualizations += f'<div class="viz-container">{create_bar_chart(series, f"Value Counts of {column_name}", primary_color)}</div>'
-             visualizations += f'''
+            visualizations += (
+                f'<div class="viz-container">{create_wordcloud(series, f"Word Cloud of {column_name}")}</div>'
+            )
+        else:  # Categorical
+            visualizations += f'<div class="viz-container">{create_bar_chart(series, f"Value Counts of {column_name}", primary_color)}</div>'
+            visualizations += f"""
                 <div class="expandable-card">
                     <div class="expandable-header" onclick="toggleExpandable(this)"><h4>Full Value Distribution</h4><span class="expand-icon">+</span></div>
                     <div class="expandable-content"><div class="table-container">{create_value_counts_table(series)}</div></div>
-                </div>'''
+                </div>"""
 
         column_html += f"{card_header}<div class='column-visualization'>{visualizations}</div></div>"
 
         # Build detailed analysis for the "Text Analysis" tab if it's a text column
         if analysis["is_text"]:
             text_card_content = f"{card_header}"
-            text_card_content += f'<div class="viz-container">{create_wordcloud(series, f"Word Cloud of {column_name}")}</div>'
+            text_card_content += (
+                f'<div class="viz-container">{create_wordcloud(series, f"Word Cloud of {column_name}")}</div>'
+            )
 
             # Word stats
             text_card_content += f"""
@@ -115,55 +177,55 @@ def create_html_report(df, title, column_analyses, basic_stats, primary_color="#
 
             # LLM stats
             if "model_token_stats" in analysis and analysis["model_token_stats"]:
-                 text_card_content += '<div class="alert alert-info"><strong>Note:</strong> Calculated costs are based on input costs only.</div>'
-                 # Get the model used for tokenization (if available)
-                 tokenizer_model = analysis.get("model_name", "")
+                text_card_content += '<div class="alert alert-info"><strong>Note:</strong> Calculated costs are based on input costs only.</div>'
+                # Get the model used for tokenization (if available)
+                tokenizer_model = analysis.get("model_name", "")
 
-                 for model_name, model_stats in analysis["model_token_stats"].items():
-                     if model_stats.get("total_tokens", 0) > 0:
+                for model_name, model_stats in analysis["model_token_stats"].items():
+                    if model_stats.get("total_tokens", 0) > 0:
                         # Start expandable card
-                        text_card_content += f'''
+                        text_card_content += f"""
                         <div class="expandable-card">
                             <div class="expandable-header" onclick="toggleExpandable(this)"><h4>LLM Analysis: {model_name}</h4><span class="expand-icon">+</span></div>
                             <div class="expandable-content">
                                 <div class="text-stats-container">
-                        '''
+                        """
 
                         # Only show token statistics for the model used to generate tokens
                         if model_name == tokenizer_model:
-                            text_card_content += f'''
+                            text_card_content += f"""
                                     <div class="text-stats-grid">
                                         <div class="text-stat-card"><div class="text-stat-title">Unique Tokens</div><div class="text-stat-value">{model_stats.get("unique_tokens", 0):,}</div></div>
                                         <div class="text-stat-card"><div class="text-stat-title">Total Tokens</div><div class="text-stat-value">{model_stats.get("total_tokens", 0):,}</div></div>
                                         <div class="text-stat-card"><div class="text-stat-title">Avg Tokens/Doc</div><div class="text-stat-value">{model_stats.get("avg_tokens_per_doc", 0)}</div></div>
                                     </div>
-                            '''
+                            """
 
                         # Show cost statistics for all models
                         if "total_token_cost" in model_stats:
-                            text_card_content += f'''
+                            text_card_content += f"""
                                 <h4 class="mt-4">Cost Statistics</h4>
                                 <div class="text-stats-grid">
                                     <div class="text-stat-card"><div class="text-stat-title">Total Cost</div><div class="text-stat-value">${model_stats.get("total_token_cost", 0):,.4f}</div></div>
                                     <div class="text-stat-card"><div class="text-stat-title">Avg Cost/Doc</div><div class="text-stat-value">${model_stats.get("avg_cost_per_doc", 0):,.4f}</div></div>
-                                </div>'''
+                                </div>"""
 
                         # Close the stats container
-                        text_card_content += '''
+                        text_card_content += """
                                 </div>
-                        '''
+                        """
 
                         # Only show token visualizations for the model used to generate tokens
                         if model_name == tokenizer_model:
-                            text_card_content += f'''
+                            text_card_content += f"""
                                 <div class="viz-container">{create_token_count_histogram(model_stats.get("token_counts", []), f"Token Count Distribution ({model_name})")}</div>
                                 <div class="viz-container">{create_token_count_boxplot(model_stats.get("token_counts", []), f"Token Count Boxplot ({model_name})")}</div>
-                            '''
+                            """
 
                         # Close the expandable card
-                        text_card_content += '''
+                        text_card_content += """
                             </div>
-                        </div>'''
+                        </div>"""
 
             text_columns_html += f'<div class="column-card">{text_card_content}</div>'
 
