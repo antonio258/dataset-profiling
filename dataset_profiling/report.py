@@ -23,7 +23,6 @@ from .visualize import (
     create_word_count_boxplot,
     create_token_count_boxplot,
     create_missing_values_chart,
-    create_token_cost_histogram,
     create_word_count_histogram,
     create_token_count_histogram,
 )
@@ -82,159 +81,201 @@ def generate_profile_report(
     return output_file
 
 
-def create_html_report(df, title, column_analyses, basic_stats, primary_color="#2196f3"):
-    """Create an HTML report with all the analyses and visualizations.
-
-    Generates a complete HTML report with multiple tabs for dataset overview,
-    column analysis, and text analysis. The report includes interactive elements
-    such as expandable sections and tabs.
+def _create_column_card_header(column_name, analysis):
+    """Create the header part of a column card.
 
     Args:
-        df (pandas.DataFrame): The DataFrame that was analyzed
-        title (str): The title for the report
-        column_analyses (list): List of column analysis dictionaries from analyze_column
-        basic_stats (dict): Dictionary of basic statistics from get_basic_stats
-        primary_color (str, optional): Primary color for the report's visualizations. Defaults to "#2196f3".
+        column_name (str): The name of the column
+        analysis (dict): The analysis dictionary for the column
 
     Returns:
-        str: Complete HTML report as a string
+        str: HTML string for the column card header
     """
-    missing_chart = create_missing_values_chart(df, "Missing Values by Column", primary_color)
-    dtypes_chart = create_data_types_chart(df, "Data Types Distribution")
+    # Common part of the column card
+    card_header = f"""
+    <div class="column-card">
+        <h3>{column_name}</h3>
+        <div class="column-metadata">
+            <p><strong>Type:</strong> {analysis["dtype"]}</p>
+            <p><strong>Missing:</strong> {analysis["missing"]} ({analysis["missing_percent"]}%)</p>
+            <p><strong>Unique:</strong> {analysis["unique"]} ({analysis["unique_percent"]}%)</p>
+    """
 
-    column_html = ""
-    text_columns_html = ""
-    for analysis in column_analyses:
-        column_name = analysis["name"]
-        series = df[column_name]
-
-        # Common part of the column card
-        card_header = f"""
-        <div class="column-card">
-            <h3>{column_name}</h3>
-            <div class="column-metadata">
-                <p><strong>Type:</strong> {analysis["dtype"]}</p>
-                <p><strong>Missing:</strong> {analysis["missing"]} ({analysis["missing_percent"]}%)</p>
-                <p><strong>Unique:</strong> {analysis["unique"]} ({analysis["unique_percent"]}%)</p>
+    # Type-specific metadata
+    if analysis["is_numeric"]:
+        card_header += f"""
+            <p><strong>Min:</strong> {analysis.get("min")}</p> <p><strong>Max:</strong> {analysis.get("max")}</p> <p><strong>Mean:</strong> {analysis.get("mean")}</p>
+            <p><strong>Median:</strong> {analysis.get("median")}</p> <p><strong>Std Dev:</strong> {analysis.get("std")}</p>
+        """
+    elif analysis["is_datetime"]:
+        card_header += f"""
+            <p><strong>Start:</strong> {analysis.get("min")}</p> <p><strong>End:</strong> {analysis.get("max")}</p> <p><strong>Range (days):</strong> {analysis.get("range_days")}</p>
+        """
+    elif "avg_length" in analysis:
+        card_header += f"""
+             <p><strong>Avg Length:</strong> {analysis.get("avg_length")}</p>
+             <p><strong>Min Length:</strong> {analysis.get("min_length")}</p>
+             <p><strong>Max Length:</strong> {analysis.get("max_length")}</p>
         """
 
-        # Type-specific metadata
-        if analysis["is_numeric"]:
-            card_header += f"""
-                <p><strong>Min:</strong> {analysis.get("min")}</p> <p><strong>Max:</strong> {analysis.get("max")}</p> <p><strong>Mean:</strong> {analysis.get("mean")}</p>
-                <p><strong>Median:</strong> {analysis.get("median")}</p> <p><strong>Std Dev:</strong> {analysis.get("std")}</p>
+    card_header += "</div>"
+    return card_header
+
+
+def _create_column_visualizations(analysis, series, column_name, primary_color):
+    """Create visualizations for a column based on its type.
+
+    Args:
+        analysis (dict): The analysis dictionary for the column
+        series (pandas.Series): The series to visualize
+        column_name (str): The name of the column
+        primary_color (str): The primary color for visualizations
+
+    Returns:
+        str: HTML string for the column visualizations
+    """
+    visualizations = ""
+    if analysis["is_numeric"]:
+        visualizations += '<div class="viz-container">' f"{create_histogram(series, primary_color)}" "</div>"
+        visualizations += f'<div class="viz-container">{create_box_plot(series, primary_color)}</div>'
+    elif analysis["is_datetime"]:
+        visualizations += f'<div class="viz-container">' f"{create_time_series(series, primary_color)}" f"</div>"
+    elif analysis["is_text"]:
+        visualizations += f'<div class="viz-container">{create_wordcloud(series, f"Word Cloud of {column_name}")}</div>'
+    else:  # Categorical
+        visualizations += f'<div class="viz-container">' f"{create_bar_chart(series, primary_color)}" f"</div>"
+
+        visualizations += f"""
+            <div class="expandable-card">
+                <div class="expandable-header" onclick="toggleExpandable(this)"><h4>Full Value Distribution</h4><span class="expand-icon">+</span></div>
+                <div class="expandable-content"><div class="table-container">{create_value_counts_table(series)}</div></div>
+            </div>"""
+    return visualizations
+
+
+def _create_word_stats_section(analysis, primary_color):
+    """Create the word statistics section for a text column.
+
+    Args:
+        analysis (dict): The analysis dictionary for the column
+        primary_color (str): The primary color for visualizations
+
+    Returns:
+        str: HTML string for the word statistics section
+    """
+    word_stats = f"""
+        <div class="text-stats-container">
+            <h4>Word Statistics</h4>
+            <div class="text-stats-grid">
+                <div class="text-stat-card"><div class="text-stat-title">Unique Words</div><div class="text-stat-value">{analysis.get("unique_words", 0):,}</div></div>
+                <div class="text-stat-card"><div class="text-stat-title">Total Words</div><div class="text-stat-value">{analysis.get("total_words", 0):,}</div></div>
+                <div class="text-stat-card"><div class="text-stat-title">Avg Words/Doc</div><div class="text-stat-value">{analysis.get("avg_words_per_doc", 0)}</div></div>
+            </div>
+        </div>
+    """
+    word_stats += f'<div class="viz-container">{create_word_count_histogram(analysis.get("word_counts", []), f"Word Count Distribution", primary_color)}</div>'
+    word_stats += f'<div class="viz-container">{create_word_count_boxplot(analysis.get("word_counts", []), f"Word Count Boxplot", primary_color)}</div>'
+    return word_stats
+
+
+def _create_llm_stats_section(analysis):
+    """Create the LLM statistics section for a text column.
+
+    Args:
+        analysis (dict): The analysis dictionary for the column
+
+    Returns:
+        str: HTML string for the LLM statistics section
+    """
+    if "model_token_stats" not in analysis or not analysis["model_token_stats"]:
+        return ""
+
+    llm_stats = (
+        '<div class="alert alert-info"><strong>Note:</strong> Calculated costs are based on input costs only.</div>'
+    )
+    # Get the model used for tokenization (if available)
+    tokenizer_model = analysis.get("model_name", "")
+
+    for model_name, model_stats in analysis["model_token_stats"].items():
+        if model_stats.get("total_tokens", 0) > 0:
+            # Start expandable card
+            llm_stats += f"""
+            <div class="expandable-card">
+                <div class="expandable-header" onclick="toggleExpandable(this)"><h4>LLM Analysis: {model_name}</h4><span class="expand-icon">+</span></div>
+                <div class="expandable-content">
+                    <div class="text-stats-container">
             """
-        elif analysis["is_datetime"]:
-            card_header += f"""
-                <p><strong>Start:</strong> {analysis.get("min")}</p> <p><strong>End:</strong> {analysis.get("max")}</p> <p><strong>Range (days):</strong> {analysis.get("range_days")}</p>
-            """
-        elif "avg_length" in analysis:
-            card_header += f"""
-                 <p><strong>Avg Length:</strong> {analysis.get("avg_length")}</p>
-                 <p><strong>Min Length:</strong> {analysis.get("min_length")}</p>
-                 <p><strong>Max Length:</strong> {analysis.get("max_length")}</p>
-            """
 
-        card_header += "</div>"
+            # Only show token statistics for the model used to generate tokens
+            if model_name == tokenizer_model:
+                llm_stats += f"""
+                        <div class="text-stats-grid">
+                            <div class="text-stat-card"><div class="text-stat-title">Unique Tokens</div><div class="text-stat-value">{model_stats.get("unique_tokens", 0):,}</div></div>
+                            <div class="text-stat-card"><div class="text-stat-title">Total Tokens</div><div class="text-stat-value">{model_stats.get("total_tokens", 0):,}</div></div>
+                            <div class="text-stat-card"><div class="text-stat-title">Avg Tokens/Doc</div><div class="text-stat-value">{model_stats.get("avg_tokens_per_doc", 0)}</div></div>
+                        </div>
+                """
 
-        visualizations = ""
-        # Type-specific visualizations for the "Column Analysis" tab
-        if analysis["is_numeric"]:
-            visualizations += f'<div class="viz-container">{create_histogram(series, f"Distribution of {column_name}", primary_color)}</div>'
-            visualizations += f'<div class="viz-container">{create_box_plot(series, f"Box Plot of {column_name}", primary_color)}</div>'
-        elif analysis["is_datetime"]:
-            visualizations += f'<div class="viz-container">{create_time_series(series, f"Time Series of {column_name}", primary_color)}</div>'
-        elif analysis["is_text"]:
-            visualizations += (
-                f'<div class="viz-container">{create_wordcloud(series, f"Word Cloud of {column_name}")}</div>'
-            )
-        else:  # Categorical
-            visualizations += f'<div class="viz-container">{create_bar_chart(series, f"Value Counts of {column_name}", primary_color)}</div>'
-            visualizations += f"""
-                <div class="expandable-card">
-                    <div class="expandable-header" onclick="toggleExpandable(this)"><h4>Full Value Distribution</h4><span class="expand-icon">+</span></div>
-                    <div class="expandable-content"><div class="table-container">{create_value_counts_table(series)}</div></div>
-                </div>"""
-
-        column_html += f"{card_header}<div class='column-visualization'>{visualizations}</div></div>"
-
-        # Build detailed analysis for the "Text Analysis" tab if it's a text column
-        if analysis["is_text"]:
-            text_card_content = f"{card_header}"
-            text_card_content += (
-                f'<div class="viz-container">{create_wordcloud(series, f"Word Cloud of {column_name}")}</div>'
-            )
-
-            # Word stats
-            text_card_content += f"""
-                <div class="text-stats-container">
-                    <h4>Word Statistics</h4>
+            # Show cost statistics for all models
+            if "total_token_cost" in model_stats:
+                llm_stats += f"""
+                    <h4 class="mt-4">Cost Statistics</h4>
                     <div class="text-stats-grid">
-                        <div class="text-stat-card"><div class="text-stat-title">Unique Words</div><div class="text-stat-value">{analysis.get("unique_words", 0):,}</div></div>
-                        <div class="text-stat-card"><div class="text-stat-title">Total Words</div><div class="text-stat-value">{analysis.get("total_words", 0):,}</div></div>
-                        <div class="text-stat-card"><div class="text-stat-title">Avg Words/Doc</div><div class="text-stat-value">{analysis.get("avg_words_per_doc", 0)}</div></div>
+                        <div class="text-stat-card"><div class="text-stat-title">Total Cost</div><div class="text-stat-value">${model_stats.get("total_token_cost", 0):,.4f}</div></div>
+                        <div class="text-stat-card"><div class="text-stat-title">Avg Cost/Doc</div><div class="text-stat-value">${model_stats.get("avg_cost_per_doc", 0):,.4f}</div></div>
+                    </div>"""
+
+            # Close the stats container
+            llm_stats += """
                     </div>
-                </div>
             """
-            text_card_content += f'<div class="viz-container">{create_word_count_histogram(analysis.get("word_counts", []), f"Word Count Distribution", primary_color)}</div>'
-            text_card_content += f'<div class="viz-container">{create_word_count_boxplot(analysis.get("word_counts", []), f"Word Count Boxplot", primary_color)}</div>'
 
-            # LLM stats
-            if "model_token_stats" in analysis and analysis["model_token_stats"]:
-                text_card_content += '<div class="alert alert-info"><strong>Note:</strong> Calculated costs are based on input costs only.</div>'
-                # Get the model used for tokenization (if available)
-                tokenizer_model = analysis.get("model_name", "")
+            # Only show token visualizations for the model used to generate tokens
+            if model_name == tokenizer_model:
+                llm_stats += f"""
+                    <div class="viz-container">{create_token_count_histogram(model_stats.get("token_counts", []), f"Token Count Distribution ({model_name})")}</div>
+                    <div class="viz-container">{create_token_count_boxplot(model_stats.get("token_counts", []), f"Token Count Boxplot ({model_name})")}</div>
+                """
 
-                for model_name, model_stats in analysis["model_token_stats"].items():
-                    if model_stats.get("total_tokens", 0) > 0:
-                        # Start expandable card
-                        text_card_content += f"""
-                        <div class="expandable-card">
-                            <div class="expandable-header" onclick="toggleExpandable(this)"><h4>LLM Analysis: {model_name}</h4><span class="expand-icon">+</span></div>
-                            <div class="expandable-content">
-                                <div class="text-stats-container">
-                        """
+            # Close the expandable card
+            llm_stats += """
+                </div>
+            </div>"""
 
-                        # Only show token statistics for the model used to generate tokens
-                        if model_name == tokenizer_model:
-                            text_card_content += f"""
-                                    <div class="text-stats-grid">
-                                        <div class="text-stat-card"><div class="text-stat-title">Unique Tokens</div><div class="text-stat-value">{model_stats.get("unique_tokens", 0):,}</div></div>
-                                        <div class="text-stat-card"><div class="text-stat-title">Total Tokens</div><div class="text-stat-value">{model_stats.get("total_tokens", 0):,}</div></div>
-                                        <div class="text-stat-card"><div class="text-stat-title">Avg Tokens/Doc</div><div class="text-stat-value">{model_stats.get("avg_tokens_per_doc", 0)}</div></div>
-                                    </div>
-                            """
+    return llm_stats
 
-                        # Show cost statistics for all models
-                        if "total_token_cost" in model_stats:
-                            text_card_content += f"""
-                                <h4 class="mt-4">Cost Statistics</h4>
-                                <div class="text-stats-grid">
-                                    <div class="text-stat-card"><div class="text-stat-title">Total Cost</div><div class="text-stat-value">${model_stats.get("total_token_cost", 0):,.4f}</div></div>
-                                    <div class="text-stat-card"><div class="text-stat-title">Avg Cost/Doc</div><div class="text-stat-value">${model_stats.get("avg_cost_per_doc", 0):,.4f}</div></div>
-                                </div>"""
 
-                        # Close the stats container
-                        text_card_content += """
-                                </div>
-                        """
+def _create_text_analysis_card(analysis, series, column_name, primary_color):
+    """Create a text analysis card for the Text Analysis tab.
 
-                        # Only show token visualizations for the model used to generate tokens
-                        if model_name == tokenizer_model:
-                            text_card_content += f"""
-                                <div class="viz-container">{create_token_count_histogram(model_stats.get("token_counts", []), f"Token Count Distribution ({model_name})")}</div>
-                                <div class="viz-container">{create_token_count_boxplot(model_stats.get("token_counts", []), f"Token Count Boxplot ({model_name})")}</div>
-                            """
+    Args:
+        analysis (dict): The analysis dictionary for the column
+        series (pandas.Series): The series to visualize
+        column_name (str): The name of the column
+        primary_color (str): The primary color for visualizations
 
-                        # Close the expandable card
-                        text_card_content += """
-                            </div>
-                        </div>"""
+    Returns:
+        str: HTML string for the text analysis card
+    """
+    card_header = _create_column_card_header(column_name, analysis)
+    text_card_content = card_header
+    text_card_content += f'<div class="viz-container">{create_wordcloud(series, f"Word Cloud of {column_name}")}</div>'
+    text_card_content += _create_word_stats_section(analysis, primary_color)
+    text_card_content += _create_llm_stats_section(analysis)
+    return f'<div class="column-card">{text_card_content}</div>'
 
-            text_columns_html += f'<div class="column-card">{text_card_content}</div>'
 
-    # The full HTML template is very large. It is being copied from the original file.
-    html_template = f"""
+def _create_html_head(title, primary_color):
+    """Create the HTML head section with styles and scripts.
+
+    Args:
+        title (str): The title for the report
+        primary_color (str): The primary color for the report
+
+    Returns:
+        str: HTML string for the head section
+    """
+    return f"""
     <!DOCTYPE html>
     <html lang="en">
     <head>
@@ -294,6 +335,80 @@ def create_html_report(df, title, column_analyses, basic_stats, primary_color="#
             footer {{ text-align: center; margin-top: 30px; padding: 20px; color: #666; font-size: 14px; border-top: 1px solid var(--divider-color); }}
         </style>
     </head>
+    """
+
+
+def _create_dataset_overview_tab(df, basic_stats, dtypes_chart, missing_chart):
+    """Create the Dataset Overview tab content.
+
+    Args:
+        df (pandas.DataFrame): The DataFrame that was analyzed
+        basic_stats (dict): Dictionary of basic statistics
+        dtypes_chart (str): HTML for the data types chart
+        missing_chart (str): HTML for the missing values chart
+
+    Returns:
+        str: HTML string for the Dataset Overview tab
+    """
+    return f"""
+    <div id="dataset-overview" class="tab-content">
+        <div class="stats-container">
+            <div class="stat-card"><h3>Rows</h3><p>{basic_stats["rows"]:,}</p></div>
+            <div class="stat-card"><h3>Columns</h3><p>{basic_stats["columns"]}</p></div>
+            <div class="stat-card"><h3>Missing Cells</h3><p>{basic_stats["missing_cells"]:,} ({basic_stats["missing_percent"]}%)</p></div>
+            <div class="stat-card"><h3>Duplicate Rows</h3><p>{basic_stats["duplicate_rows"]:,} ({basic_stats["duplicate_percent"]}%)</p></div>
+            <div class="stat-card"><h3>Memory Usage</h3><p>{basic_stats["memory_usage"]} MB</p></div>
+        </div>
+        <div class="overview-card"><h3>Data Types</h3><div class="viz-container">{dtypes_chart}</div></div>
+        <div class="overview-card"><h3>Missing Values</h3><div class="viz-container">{missing_chart}</div></div>
+        <div class="overview-card"><h3>Sample Data</h3><div class="table-container">{create_sample_data_table(df)}</div></div>
+    </div>
+    """
+
+
+def create_html_report(df, title, column_analyses, basic_stats, primary_color="#2196f3"):
+    """Create an HTML report with all the analyses and visualizations.
+
+    Generates a complete HTML report with multiple tabs for dataset overview,
+    column analysis, and text analysis. The report includes interactive elements
+    such as expandable sections and tabs.
+
+    Args:
+        df (pandas.DataFrame): The DataFrame that was analyzed
+        title (str): The title for the report
+        column_analyses (list): List of column analysis dictionaries from analyze_column
+        basic_stats (dict): Dictionary of basic statistics from get_basic_stats
+        primary_color (str, optional): Primary color for the report's visualizations. Defaults to "#2196f3".
+
+    Returns:
+        str: Complete HTML report as a string
+    """
+    missing_chart = create_missing_values_chart(df, primary_color)
+    dtypes_chart = create_data_types_chart(df)
+
+    # Generate column cards for the Column Analysis tab
+    column_html = ""
+    text_columns_html = ""
+    for analysis in column_analyses:
+        column_name = analysis["name"]
+        series = df[column_name]
+
+        # Create column card for Column Analysis tab
+        card_header = _create_column_card_header(column_name, analysis)
+        visualizations = _create_column_visualizations(analysis, series, column_name, primary_color)
+        column_html += f"{card_header}<div class='column-visualization'>{visualizations}</div></div>"
+
+        # Create text analysis card for Text Analysis tab if it's a text column
+        if analysis["is_text"]:
+            text_columns_html += _create_text_analysis_card(analysis, series, column_name, primary_color)
+
+    # Create the HTML report
+    html_head = _create_html_head(title, primary_color)
+    dataset_overview_tab = _create_dataset_overview_tab(df, basic_stats, dtypes_chart, missing_chart)
+
+    # Assemble the complete HTML report
+    html_template = f"""
+    {html_head}
     <body>
         <div class="container">
             <header><h1>{title}</h1><p>Generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p></header>
@@ -303,18 +418,7 @@ def create_html_report(df, title, column_analyses, basic_stats, primary_color="#
                     <button class="tab-button" onclick="openTab(event, 'column-analysis')">Column Analysis</button>
                     <button class="tab-button" onclick="openTab(event, 'text-analysis')">Text Analysis</button>
                 </div>
-                <div id="dataset-overview" class="tab-content">
-                    <div class="stats-container">
-                        <div class="stat-card"><h3>Rows</h3><p>{basic_stats["rows"]:,}</p></div>
-                        <div class="stat-card"><h3>Columns</h3><p>{basic_stats["columns"]}</p></div>
-                        <div class="stat-card"><h3>Missing Cells</h3><p>{basic_stats["missing_cells"]:,} ({basic_stats["missing_percent"]}%)</p></div>
-                        <div class="stat-card"><h3>Duplicate Rows</h3><p>{basic_stats["duplicate_rows"]:,} ({basic_stats["duplicate_percent"]}%)</p></div>
-                        <div class="stat-card"><h3>Memory Usage</h3><p>{basic_stats["memory_usage"]} MB</p></div>
-                    </div>
-                    <div class="overview-card"><h3>Data Types</h3><div class="viz-container">{dtypes_chart}</div></div>
-                    <div class="overview-card"><h3>Missing Values</h3><div class="viz-container">{missing_chart}</div></div>
-                    <div class="overview-card"><h3>Sample Data</h3><div class="table-container">{create_sample_data_table(df)}</div></div>
-                </div>
+                {dataset_overview_tab}
                 <div id="column-analysis" class="tab-content">{column_html}</div>
                 <div id="text-analysis" class="tab-content">
                     <h2>Text Columns Analysis</h2>

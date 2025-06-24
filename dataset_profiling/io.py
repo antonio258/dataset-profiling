@@ -9,9 +9,7 @@ import os
 import logging
 
 import yaml
-import numpy as np
 import pandas as pd
-from pandas import CategoricalDtype
 
 # Get the module logger
 logger = logging.getLogger("dataset_profiling.io")
@@ -38,7 +36,7 @@ def parse_yaml_config(config_file):
     Raises:
         ValueError: If the configuration is missing required fields or has invalid values
     """
-    with open(config_file, "r") as f:
+    with open(config_file, "r", encoding="utf-8") as f:
         config = yaml.safe_load(f)
 
     # Validate required fields
@@ -77,6 +75,97 @@ def parse_yaml_config(config_file):
     return config
 
 
+def _load_data_as_strings(file_path, file_ext):
+    """Load data from a file with all columns as strings.
+
+    Args:
+        file_path (str): Path to the input file
+        file_ext (str): File extension (lowercase, with dot)
+
+    Returns:
+        pandas.DataFrame: DataFrame with all columns as strings
+
+    Raises:
+        ValueError: If the file format is not supported
+    """
+    if file_ext == ".csv":
+        return pd.read_csv(file_path, dtype=str)
+    if file_ext in [".xls", ".xlsx"]:
+        return pd.read_excel(file_path, dtype=str)
+    if file_ext == ".json":
+        return pd.read_json(file_path, dtype=str)
+    if file_ext == ".parquet":
+        df = pd.read_parquet(file_path)
+        for col in df.columns:
+            df[col] = df[col].astype(str)
+        return df
+    if file_ext in [".pickle", ".pkl"]:
+        df = pd.read_pickle(file_path)
+        for col in df.columns:
+            df[col] = df[col].astype(str)
+        return df
+    raise ValueError(f"Unsupported file format: {file_ext}")
+
+
+def _load_data_normal(file_path, file_ext):
+    """Load data from a file with default data types.
+
+    Args:
+        file_path (str): Path to the input file
+        file_ext (str): File extension (lowercase, with dot)
+
+    Returns:
+        pandas.DataFrame: DataFrame with default data types
+
+    Raises:
+        ValueError: If the file format is not supported
+    """
+    if file_ext == ".csv":
+        return pd.read_csv(file_path)
+    if file_ext in [".xls", ".xlsx"]:
+        return pd.read_excel(file_path)
+    if file_ext == ".json":
+        return pd.read_json(file_path)
+    if file_ext == ".parquet":
+        return pd.read_parquet(file_path)
+    if file_ext in [".pickle", ".pkl"]:
+        return pd.read_pickle(file_path)
+    raise ValueError(f"Unsupported file format: {file_ext}")
+
+
+def _apply_schema(df, schema):
+    """Apply a schema to a DataFrame, converting columns to specified data types.
+
+    Args:
+        df (pandas.DataFrame): DataFrame to convert
+        schema (dict): Schema mapping column names to data types
+
+    Returns:
+        pandas.DataFrame: DataFrame with columns converted to specified data types
+    """
+    for column, dtype in schema.items():
+        if column in df.columns:
+            try:
+                dtype_lower = dtype.lower()
+                if dtype_lower in ("int", "integer"):
+                    df[column] = pd.to_numeric(df[column], errors="coerce").astype("Int64")
+                elif dtype_lower in ("float", "numeric"):
+                    df[column] = pd.to_numeric(df[column], errors="coerce")
+                elif dtype_lower in ("bool", "boolean"):
+                    df[column] = (
+                        df[column]
+                        .map({"True": True, "true": True, "1": True, "False": False, "false": False, "0": False})
+                        .astype(bool)
+                    )
+                elif dtype_lower in ("date", "datetime"):
+                    df[column] = pd.to_datetime(df[column], errors="coerce")
+                elif dtype_lower == "category":
+                    df[column] = df[column].astype("category")
+            except Exception as e:
+                logger.warning(f"Could not convert column '{column}' to {dtype}: {str(e)}")
+    return df
+
+
 def load_data(file_path, schema=None):
     """Load data from various file formats based on file extension.
 
@@ -103,55 +192,6 @@ def load_data(file_path, schema=None):
     file_ext = os.path.splitext(file_path)[1].lower()
 
     if schema:
-        if file_ext == ".csv":
-            df = pd.read_csv(file_path, dtype=str)
-        elif file_ext in [".xls", ".xlsx"]:
-            df = pd.read_excel(file_path, dtype=str)
-        elif file_ext == ".json":
-            df = pd.read_json(file_path, dtype=str)
-        elif file_ext == ".parquet":
-            df = pd.read_parquet(file_path)
-            for col in df.columns:
-                df[col] = df[col].astype(str)
-        elif file_ext in [".pickle", ".pkl"]:
-            df = pd.read_pickle(file_path)
-            for col in df.columns:
-                df[col] = df[col].astype(str)
-        else:
-            raise ValueError(f"Unsupported file format: {file_ext}")
-
-        for column, dtype in schema.items():
-            if column in df.columns:
-                try:
-                    dtype_lower = dtype.lower()
-                    if dtype_lower in ("int", "integer"):
-                        df[column] = pd.to_numeric(df[column], errors="coerce").astype("Int64")
-                    elif dtype_lower in ("float", "numeric"):
-                        df[column] = pd.to_numeric(df[column], errors="coerce")
-                    elif dtype_lower in ("bool", "boolean"):
-                        df[column] = (
-                            df[column]
-                            .map({"True": True, "true": True, "1": True, "False": False, "false": False, "0": False})
-                            .astype(bool)
-                        )
-                    elif dtype_lower in ("date", "datetime"):
-                        df[column] = pd.to_datetime(df[column], errors="coerce")
-                    elif dtype_lower == "category":
-                        df[column] = df[column].astype("category")
-                except Exception as e:
-                    logger.warning(f"Could not convert column '{column}' to {dtype}: {str(e)}")
-        return df
-
-    # Load data normally without schema
-    if file_ext == ".csv":
-        return pd.read_csv(file_path)
-    elif file_ext in [".xls", ".xlsx"]:
-        return pd.read_excel(file_path)
-    elif file_ext == ".json":
-        return pd.read_json(file_path)
-    elif file_ext == ".parquet":
-        return pd.read_parquet(file_path)
-    elif file_ext in [".pickle", ".pkl"]:
-        return pd.read_pickle(file_path)
-    else:
-        raise ValueError(f"Unsupported file format: {file_ext}")
+        df = _load_data_as_strings(file_path, file_ext)
+        return _apply_schema(df, schema)
+    return _load_data_normal(file_path, file_ext)

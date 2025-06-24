@@ -33,7 +33,8 @@ dev = [
     "interrogate>=1.7.0",
     "isort>=6.0.1",
     "pre-commit>=4.2.0",
-    "yamllint>=1.37.0"
+    "pylint>=3.3.7",
+    "yamllint>=1.37.0",
 ]
 transformers = [
     "transformers>=4.52.4",

@@ -10,7 +10,6 @@ basic analysis when advanced tokenization is not available.
 
 import logging
 
-import pandas as pd
 from sklearn.feature_extraction.text import CountVectorizer
 
 # Get the module logger

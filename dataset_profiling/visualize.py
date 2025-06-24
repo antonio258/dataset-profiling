@@ -19,12 +19,11 @@ from plotly.subplots import make_subplots
 matplotlib.use("Agg")
 
 
-def create_histogram(series, title, primary_color="#2196f3"):
+def create_histogram(series, primary_color="#2196f3"):
     """Create a histogram visualization for a numeric series.
 
     Args:
         series (pandas.Series): The numeric series to visualize
-        title (str): The title of the histogram
         primary_color (str, optional): The color to use for the histogram bars. Defaults to "#2196f3".
 
     Returns:
@@ -33,7 +32,6 @@ def create_histogram(series, title, primary_color="#2196f3"):
     fig = px.histogram(
         series.dropna(),
         x=series.name,
-        title=title,
         template="plotly_white",
         color_discrete_sequence=[primary_color],
     )
@@ -41,13 +39,13 @@ def create_histogram(series, title, primary_color="#2196f3"):
         xaxis_title=series.name,
         yaxis_title="Count",
         showlegend=False,
-        margin=dict(l=40, r=40, t=40, b=40),
+        margin=dict(l=40, r=40, t=0, b=20),
         autosize=True,
     )
     return fig.to_html(full_html=False, include_plotlyjs="cdn", config={"responsive": True})
 
 
-def create_bar_chart(series, title, primary_color="#2196f3"):
+def create_bar_chart(series, primary_color="#2196f3"):
     """Create a bar chart visualization for categorical data.
 
     Creates a bar chart showing value counts for categorical data.
@@ -56,7 +54,6 @@ def create_bar_chart(series, title, primary_color="#2196f3"):
 
     Args:
         series (pandas.Series): The categorical series to visualize
-        title (str): The title of the bar chart
         primary_color (str, optional): The color to use for the bars. Defaults to "#2196f3".
 
     Returns:
@@ -71,7 +68,6 @@ def create_bar_chart(series, title, primary_color="#2196f3"):
     fig = px.bar(
         x=value_counts.index,
         y=value_counts.values,
-        title=title,
         template="plotly_white",
         color_discrete_sequence=[primary_color],
     )
@@ -80,7 +76,7 @@ def create_bar_chart(series, title, primary_color="#2196f3"):
         xaxis_title=series.name,
         yaxis_title="Count",
         showlegend=False,
-        margin=dict(l=40, r=40, t=40, b=40),
+        margin=dict(l=40, r=40, t=0, b=20),
         autosize=True,
     )
     if len(value_counts) > 5:
@@ -88,30 +84,28 @@ def create_bar_chart(series, title, primary_color="#2196f3"):
     return fig.to_html(full_html=False, include_plotlyjs="cdn", config={"responsive": True})
 
 
-def create_box_plot(series, title, primary_color="#2196f3"):
+def create_box_plot(series, primary_color="#2196f3"):
     """Create a box plot visualization for a numeric series.
 
     Args:
         series (pandas.Series): The numeric series to visualize
-        title (str): The title of the box plot
         primary_color (str, optional): The color to use for the box plot. Defaults to "#2196f3".
 
     Returns:
         str: HTML representation of the box plot
     """
-    fig = px.box(y=series.dropna(), title=title, template="plotly_white", color_discrete_sequence=[primary_color])
-    fig.update_layout(yaxis_title=series.name, showlegend=False, margin=dict(l=40, r=40, t=40, b=40), autosize=True)
+    fig = px.box(y=series.dropna(), template="plotly_white", color_discrete_sequence=[primary_color])
+    fig.update_layout(yaxis_title=series.name, showlegend=False, margin=dict(l=40, r=40, t=0, b=20), autosize=True)
     return fig.to_html(full_html=False, include_plotlyjs="cdn", config={"responsive": True})
 
 
-def create_time_series(series, title, primary_color="#2196f3"):
+def create_time_series(series, primary_color="#2196f3"):
     """Create a time series visualization for a datetime series.
 
     Creates a line chart showing the count of values by date.
 
     Args:
         series (pandas.Series): The datetime series to visualize
-        title (str): The title of the time series chart
         primary_color (str, optional): The color to use for the line. Defaults to "#2196f3".
 
     Returns:
@@ -121,7 +115,6 @@ def create_time_series(series, title, primary_color="#2196f3"):
     fig = px.line(
         x=date_counts.index,
         y=date_counts.values,
-        title=title,
         template="plotly_white",
         color_discrete_sequence=[primary_color],
     )
@@ -129,13 +122,13 @@ def create_time_series(series, title, primary_color="#2196f3"):
         xaxis_title="Date",
         yaxis_title="Count",
         showlegend=False,
-        margin=dict(l=40, r=40, t=40, b=40),
+        margin=dict(l=40, r=40, t=0, b=20),
         autosize=True,
     )
     return fig.to_html(full_html=False, include_plotlyjs="cdn", config={"responsive": True})
 
 
-def create_missing_values_chart(df, title, primary_color="#2196f3"):
+def create_missing_values_chart(df, primary_color="#2196f3"):
     """Create a chart showing missing values by column.
 
     Creates a dual-axis chart with bars showing the count of missing values
@@ -144,7 +137,6 @@ def create_missing_values_chart(df, title, primary_color="#2196f3"):
 
     Args:
         df (pandas.DataFrame): The DataFrame to analyze for missing values
-        title (str): The title of the chart
         primary_color (str, optional): The color to use for the bars. Defaults to "#2196f3".
 
     Returns:
@@ -183,7 +175,7 @@ def create_missing_values_chart(df, title, primary_color="#2196f3"):
         title="",
         template="plotly_white",
         xaxis_title="Column",
-        margin=dict(l=40, r=40, t=10, b=40),
+        margin=dict(l=40, r=40, t=0, b=20),
         autosize=True,
     )
     fig.update_yaxes(title_text="Count", secondary_y=False)
@@ -193,12 +185,11 @@ def create_missing_values_chart(df, title, primary_color="#2196f3"):
     return fig.to_html(full_html=False, include_plotlyjs="cdn", config={"responsive": True})
 
 
-def create_data_types_chart(df, title):
+def create_data_types_chart(df):
     """Create a pie chart showing the distribution of data types in the DataFrame.
 
     Args:
         df (pandas.DataFrame): The DataFrame to analyze
-        title (str): The title of the chart
 
     Returns:
         str: HTML representation of the data types pie chart
@@ -207,11 +198,10 @@ def create_data_types_chart(df, title):
     fig = px.pie(
         values=dtype_counts.values,
         names=dtype_counts.index.astype(str),
-        title=title,
         template="plotly_white",
         color_discrete_sequence=px.colors.qualitative.Plotly,
     )
-    fig.update_layout(showlegend=True, margin=dict(l=40, r=40, t=40, b=40), autosize=True)
+    fig.update_layout(showlegend=True, margin=dict(l=40, r=40, t=0, b=20), autosize=True)
     return fig.to_html(full_html=False, include_plotlyjs="cdn", config={"responsive": True})
 
 
@@ -237,7 +227,6 @@ def create_wordcloud(series, title):
         plt.figure(figsize=(10, 5))
         plt.imshow(wordcloud, interpolation="bilinear")
         plt.axis("off")
-        plt.title(title)
         plt.tight_layout(pad=0)
         plt.savefig(buffer, format="png", dpi=150)
         plt.close()
