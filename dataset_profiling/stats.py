@@ -4,9 +4,14 @@ This module provides functions to calculate various statistics for DataFrames an
 including basic statistics, type-specific statistics, and text analysis with LLM tokenization.
 """
 
+import logging
+
 import pandas as pd
 
 from .text_analysis import analyze_text_with_llm_tokenizer, analyze_text_with_countvectorizer
+
+# Get the module logger
+logger = logging.getLogger("dataset_profiling.stats")
 
 
 def get_basic_stats(df):
@@ -179,7 +184,7 @@ def analyze_column(df, column, llm_models=None, llm_model=None, llm_token=None, 
                             },
                         )
                     except (ValueError, TypeError):
-                        print(f"Warning: Invalid input cost for model '{model_name}'.")
+                        logger.warning(f"Invalid input cost for model '{model_name}'.")
 
                 analysis["model_token_stats"][model_name] = model_stats
 

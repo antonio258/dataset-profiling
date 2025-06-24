@@ -8,8 +8,13 @@ The module can work with or without the transformers library, falling back to
 basic analysis when advanced tokenization is not available.
 """
 
+import logging
+
 import pandas as pd
 from sklearn.feature_extraction.text import CountVectorizer
+
+# Get the module logger
+logger = logging.getLogger("dataset_profiling.text_analysis")
 
 try:
     from transformers import AutoTokenizer
@@ -55,7 +60,7 @@ def analyze_text_with_countvectorizer(series):
             "word_counts": [int(count[0, 0]) for count in word_counts_matrix],
         }
     except Exception as e:
-        print(f"Error analyzing text with CountVectorizer: {str(e)}")
+        logger.error(f"Error analyzing text with CountVectorizer: {str(e)}")
         return {"unique_words": 0, "total_words": 0, "avg_words_per_doc": 0, "word_counts": []}
 
 
@@ -80,7 +85,7 @@ def analyze_text_with_llm_tokenizer(series, model_name, token=None):
             - token_counts: List of token counts for each document
     """
     if not TRANSFORMERS_AVAILABLE:
-        print("Warning: transformers library not available. Skipping LLM token analysis.")
+        logger.warning("Transformers library not available. Skipping LLM token analysis.")
         return {"unique_tokens": 0, "total_tokens": 0, "avg_tokens_per_doc": 0, "token_counts": []}
 
     try:
@@ -88,7 +93,7 @@ def analyze_text_with_llm_tokenizer(series, model_name, token=None):
         if len(non_null_series) == 0:
             return {"unique_tokens": 0, "total_tokens": 0, "avg_tokens_per_doc": 0, "token_counts": []}
 
-        print(f"Loading tokenizer for model: {model_name}")
+        logger.info(f"Loading tokenizer for model: {model_name}")
         tokenizer = AutoTokenizer.from_pretrained(model_name, token=token)
 
         token_counts = []
@@ -108,5 +113,5 @@ def analyze_text_with_llm_tokenizer(series, model_name, token=None):
             "token_counts": token_counts,
         }
     except Exception as e:
-        print(f"Error analyzing text with LLM tokenizer: {str(e)}")
+        logger.error(f"Error analyzing text with LLM tokenizer: {str(e)}")
         return {"unique_tokens": 0, "total_tokens": 0, "avg_tokens_per_doc": 0, "token_counts": []}

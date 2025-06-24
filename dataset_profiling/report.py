@@ -7,6 +7,7 @@ It combines statistics and visualizations to create an interactive report with m
 - Text Analysis: In-depth analysis of text columns including word statistics and LLM tokenization
 """
 
+import logging
 from datetime import datetime
 
 from .stats import analyze_column, get_basic_stats
@@ -26,6 +27,9 @@ from .visualize import (
     create_word_count_histogram,
     create_token_count_histogram,
 )
+
+# Get the module logger
+logger = logging.getLogger("dataset_profiling.report")
 
 
 def generate_profile_report(
@@ -58,23 +62,23 @@ def generate_profile_report(
     Returns:
         str: The path to the generated HTML report
     """
-    print("Analyzing basic statistics...")
+    logger.info("Analyzing basic statistics...")
     basic_stats = get_basic_stats(df)
 
-    print("Analyzing columns...")
+    logger.info("Analyzing columns...")
     column_analyses = []
     for column in df.columns:
-        print(f"  - Analyzing column: {column}")
+        logger.info(f"  - Analyzing column: {column}")
         analysis = analyze_column(df, column, llm_models, llm_model, llm_token, llm_input_cost)
         column_analyses.append(analysis)
 
-    print("Generating HTML report...")
+    logger.info("Generating HTML report...")
     html_report = create_html_report(df, title, column_analyses, basic_stats, primary_color)
 
     with open(output_file, "w", encoding="utf-8") as f:
         f.write(html_report)
 
-    print(f"Profile report successfully generated and saved to {output_file}")
+    logger.info(f"Profile report successfully generated and saved to {output_file}")
     return output_file
 
 

@@ -67,7 +67,7 @@ df = pd.read_csv("data.csv")
 
 # Generate a report
 generate_profile_report(
-    df, 
+    df,
     title="My Dataset Report",
     output_file="report.html"
 )
@@ -177,8 +177,3 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Acknowledgements
-
-- This project was inspired by [pandas-profiling](https://github.com/pandas-profiling/pandas-profiling)
-- Special thanks to all contributors and users of this package

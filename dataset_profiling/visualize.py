@@ -11,12 +11,12 @@ from io import BytesIO
 import matplotlib
 import pandas as pd
 import plotly.express as px
+import matplotlib.pyplot as plt
 import plotly.graph_objects as go
+from wordcloud import WordCloud
 from plotly.subplots import make_subplots
 
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-from wordcloud import WordCloud
 
 
 def create_histogram(series, title, primary_color="#2196f3"):

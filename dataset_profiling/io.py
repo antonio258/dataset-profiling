@@ -6,11 +6,15 @@ and handles different file types including CSV, Excel, JSON, Parquet, and Pickle
 """
 
 import os
+import logging
 
 import yaml
 import numpy as np
 import pandas as pd
 from pandas import CategoricalDtype
+
+# Get the module logger
+logger = logging.getLogger("dataset_profiling.io")
 
 
 def parse_yaml_config(config_file):
@@ -135,7 +139,7 @@ def load_data(file_path, schema=None):
                     elif dtype_lower == "category":
                         df[column] = df[column].astype("category")
                 except Exception as e:
-                    print(f"Warning: Could not convert column '{column}' to {dtype}: {str(e)}")
+                    logger.warning(f"Could not convert column '{column}' to {dtype}: {str(e)}")
         return df
 
     # Load data normally without schema

@@ -16,6 +16,8 @@ The main entry point is the generate_profile_report function, which analyzes a D
 and generates a comprehensive HTML report.
 """
 
+import logging
+
 from .io import load_data, parse_yaml_config
 from .stats import analyze_column, get_basic_stats
 from .report import create_html_report, generate_profile_report
@@ -31,6 +33,16 @@ from .visualize import (
     create_value_counts_table,
     create_missing_values_chart,
 )
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+
+# Create a logger for the package
+logger = logging.getLogger("dataset_profiling")
 
 __version__ = "0.1.0"
 
