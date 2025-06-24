@@ -1,7 +1,7 @@
 # Dataset Profiling
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![Documentation](https://raw.githubusercontent.com/antonio258p/dataset-profiling/main/interrogate_badge.svg)](https://github.com/antonio258p/dataset-profiling)
+[![Documentation](https://raw.githubusercontent.com/antonio258/dataset-profiling/main/interrogate_badge.svg)](https://github.com/antonio258p/dataset-profiling)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 A powerful Python package for comprehensive dataset analysis and visualization. Generate interactive HTML reports with detailed statistics, visualizations, and insights for your datasets.
